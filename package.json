@@ -6,10 +6,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/muchadoabout/homebridge-plugin-bwa.git"
+    "url": "git://github.com/muchadoabout/homebridge-plugin-bwaspa-custom.git"
   },
   "bugs": {
-    "url": "https://github.com/muchadoabout/homebridge-plugin-bwa/issues"
+    "url": "https://github.com/muchadoabout/homebridge-plugin-bwaspa-custom/issues"
   },
   "engines": {
     "homebridge": "^1.6.0 || ^2.0.0-beta.0",
