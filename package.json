@@ -1,15 +1,15 @@
 {
-  "displayName": "Balboa Spa",
-  "name": "homebridge-balboa-spa",
-  "version": "2.3.0",
-  "description": "Homebridge control of a balboa spa.",
+  "displayName": "Balboa Spa Custom",
+  "name": "homebridge-balboa-spa-custom",
+  "version": "1.0.0",
+  "description": "Homebridge control of a balboa spa (custom fork).",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/vincedarley/homebridge-plugin-bwaspa.git"
+    "url": "git://github.com/muchadoabout/homebridge-plugin-bwa.git"
   },
   "bugs": {
-    "url": "https://github.com/vincedarley/homebridge-plugin-bwaspa/issues"
+    "url": "https://github.com/muchadoabout/homebridge-plugin-bwa/issues"
   },
   "engines": {
     "homebridge": "^1.6.0 || ^2.0.0-beta.0",
