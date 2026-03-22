@@ -192,6 +192,11 @@ export class SpaClient {
             this.successfullyConnectedToSpa();
         });
         this.socket.setKeepAlive(true, 30000);
+        this.socket.setTimeout(30000);
+        this.socket?.on('timeout', () => {
+            this.log.warn("Spa socket connect timed out after 30s");
+            this.socket?.destroy(new Error('connect timeout'));
+        });
         this.socket?.on('end', () => {
             this.log.warn("SpaClient: connection ended by spa");
         });
@@ -209,6 +214,7 @@ export class SpaClient {
     successfullyConnectedToSpa() {
         this.isCurrentlyConnectedToSpa = true;
         this.reconnectAttempts = 0;
+        this.socket?.setTimeout(0);
         // Reset our knowledge of the state, since it will
         // almost certainly be out of date.
         this.resetRecentState();
