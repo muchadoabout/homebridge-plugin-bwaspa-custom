@@ -426,13 +426,12 @@ export class SpaClient {
         this.log.warn('Reconnect attempt', this.reconnectAttempts,
             '- will retry in', Math.round(delay / 1000), 'seconds');
 
-        // After 5 consecutive failures, try re-discovery if available
-        if (this.reconnectAttempts >= 5 && this.rediscoverCallback) {
+        // After 5 consecutive failures, also trigger re-discovery if available,
+        // but continue TCP retries to the last known IP in parallel.
+        if (this.reconnectAttempts === 5 && this.rediscoverCallback) {
             this.log.warn('Multiple reconnect failures (' + this.reconnectAttempts +
-                ') - triggering network re-discovery to find spa at a new IP');
-            this.reconnecting = false;
+                ') - triggering network re-discovery in parallel with continued TCP retries');
             this.rediscoverCallback();
-            return;
         }
 
         this.reconnectTimeoutId = setTimeout(() => {
@@ -458,7 +457,12 @@ export class SpaClient {
             this.log.info('Spa IP address changed from', this.host, 'to', newHost);
         }
         this.host = newHost;
+        if (this.reconnectTimeoutId) {
+            clearTimeout(this.reconnectTimeoutId);
+            this.reconnectTimeoutId = undefined;
+        }
         this.reconnecting = false;
+        this.shutdownSpaConnection();
         this.socket = this.get_socket(newHost);
     }
 
