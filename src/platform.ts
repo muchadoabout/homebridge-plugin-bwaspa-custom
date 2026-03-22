@@ -78,12 +78,21 @@ export class SpaHomebridgePlatform implements DynamicPlatformPlugin {
 
   haveAddressOfSpa(devMode: boolean, ipAddress: string) {
     if (this.spa) {
-      this.log.error('Already have a spa set up. If you wish to control two or more Spas, please file a bug report.');
+      // If we already have a spa and re-discovery found it at a new IP, reconnect.
+      this.log.info('Re-discovery found spa at', ipAddress, '- reconnecting.');
+      this.spa.updateHostAndReconnect(ipAddress);
       return;
     }
+    // Determine re-discovery callback: only if host was NOT manually configured,
+    // so we can re-discover on the network if the IP changes.
+    const rediscoverCallback = (this.config.host && this.config.host.length > 0)
+      ? undefined
+      : () => discoverSpas(this.log, this.haveAddressOfSpa.bind(this, devMode));
+
     // Create and load up our primary client which connects with the spa
     this.spa = new SpaClient(this.log, ipAddress, this.spaConfigurationKnown.bind(this),
-      this.updateStateOfAccessories.bind(this), this.executeAllRecordedActions.bind(this), devMode);
+      this.updateStateOfAccessories.bind(this), this.executeAllRecordedActions.bind(this), 
+      rediscoverCallback, devMode);
   }
 
   /**
