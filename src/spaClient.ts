@@ -112,6 +112,7 @@ export class SpaClient {
     stateUpdateCheckIntervalId: any;
     stateLoggingIntervalId: any;
     healthLogIntervalId: any;
+    tempHistoryIntervalId: any;
     // Can be set in the overall config to provide more detailed logging
     devMode: boolean;
 
@@ -167,7 +168,7 @@ export class SpaClient {
         // Our communications channel with the spa
         this.socket = this.get_socket(host);
         // Record temperature history - every 30 minutes
-        setInterval(() => {
+        this.tempHistoryIntervalId = setInterval(() => {
             this.recordTemperatureHistory();
         }, 30 * 60 * 1000);
     }
@@ -219,8 +220,12 @@ export class SpaClient {
         // We have sent, or can be the standard sending of status that the spa
         // seems to do every second.
         this.socket?.on('data', (data: any) => {
-            const bufView = new Uint8Array(data);
-            this.readAndActOnSocketContents(bufView);
+            try {
+                const bufView = new Uint8Array(data);
+                this.readAndActOnSocketContents(bufView);
+            } catch (err: any) {
+                this.log.error('Error processing spa data:', err.message || err);
+            }
         });
 
         // No need to do this once we already have all the config information once.
@@ -474,6 +479,10 @@ export class SpaClient {
             clearInterval(this.healthLogIntervalId);
             this.healthLogIntervalId = undefined;
         }
+        if (this.tempHistoryIntervalId) {
+            clearInterval(this.tempHistoryIntervalId);
+            this.tempHistoryIntervalId = undefined;
+        }
         if (this.socket != undefined) {
             this.socket.end();
             this.socket.destroy();
@@ -525,8 +534,9 @@ export class SpaClient {
         return Buffer.from(message).toString('hex').match(/.{1,2}/g);
     }
     getTargetTemp() {
-        return this.convertSpaTemperatureToExternal(this.tempRangeIsHigh 
-            ? this.targetTempModeHigh! : this.targetTempModeLow!);
+        const raw = this.tempRangeIsHigh ? this.targetTempModeHigh : this.targetTempModeLow;
+        if (raw == undefined) return undefined;
+        return this.convertSpaTemperatureToExternal(raw);
     }
     getTempIsCorF() {
         return this.temp_CorF;

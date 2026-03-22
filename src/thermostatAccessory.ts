@@ -174,9 +174,8 @@ export class ThermostatAccessory {
       if (this.platform.spa!.getFlowState() == FLOW_GOOD) {
         this.platform.log.debug("Spa doesn't allow turning heating off (only heat or cool). Reverting.");
         callback(new Error("Spa doesn't allow turning heating off (only heat or cool). Reverting."));
-        // value = Characteristic.TargetHeatingCoolingState.COOL;
-        // this.service.getCharacteristic(this.platform.Characteristic.TargetHeatingCoolingState)
-        //   .updateValue(Characteristic.TargetHeatingCoolingState.COOL);
+      } else {
+        callback(null);
       }
       // Even if we don't reject the change, we don't act on it further below. The device is
       // effectively locked into the "off" state until something is fixed.
@@ -197,9 +196,10 @@ export class ThermostatAccessory {
     this.setTargetTempMinMax();
     // We need to change the target temperature (which the Spa adjust automatically when switching
     // from High to Low), else it will take a while for HomeKit to pick that up automatically.
-    if (this.platform.spa!.getTargetTemp() != undefined) {
+    const newTarget = this.platform.spa!.getTargetTemp();
+    if (newTarget != undefined) {
       this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature)
-      .updateValue(this.platform.spa!.getTargetTemp());
+      .updateValue(newTarget);
     } else {
       this.platform.log.debug("Couldn't set target temperature, since it is currently undefined");
     }
@@ -210,10 +210,11 @@ export class ThermostatAccessory {
     if (!this.platform.isCurrentlyConnected()) {
       callback(this.platform.connectionProblem);
     } else {
-      const temperature = this.platform.spa!.convertTempToC(this.platform.spa!.getTargetTemp());
+      const targetTemp = this.platform.spa!.getTargetTemp();
+      const temperature = targetTemp != undefined ? this.platform.spa!.convertTempToC(targetTemp) : undefined;
       this.platform.log.debug('Get Target Temperature <-', temperature, this.platform.status());
   
-      callback(null, temperature);
+      callback(null, temperature ?? null);
     }
   }
 
