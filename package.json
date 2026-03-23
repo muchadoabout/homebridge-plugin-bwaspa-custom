@@ -1,7 +1,7 @@
 {
   "displayName": "Balboa Spa Custom",
   "name": "homebridge-balboa-spa-custom",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Homebridge control of a balboa spa (custom fork).",
   "license": "Apache-2.0",
   "repository": {

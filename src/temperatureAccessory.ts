@@ -56,10 +56,12 @@ export class TemperatureAccessory {
       callback(this.platform.connectionProblem);
     } else {
       const temperature = this.platform.spa!.getCurrentTemp();
-
-      // Seems as if Homekit interprets null as something simply to be ignored, hence Homekit
-      // just uses the previous known value.
-      const val = (temperature == undefined ? null : this.platform.spa!.convertTempToC(temperature!));
+      if (temperature == undefined) {
+        this.platform.log.debug('Get Temperature <- unknown (waiting for spa)', this.platform.status());
+        callback(new Error('Temperature not yet available'));
+        return;
+      }
+      const val = this.platform.spa!.convertTempToC(temperature);
       this.platform.log.debug('Get Temperature <-', val, this.platform.status());
       callback(null, val);
     }
