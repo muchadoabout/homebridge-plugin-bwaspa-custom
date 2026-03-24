@@ -57,8 +57,8 @@ export class TemperatureAccessory {
     } else {
       const temperature = this.platform.spa!.getCurrentTemp();
       if (temperature == undefined) {
-        this.platform.log.debug('Get Temperature <- unknown (waiting for spa)', this.platform.status());
-        callback(new Error('Temperature not yet available'));
+        this.platform.log.debug('Get Temperature <- waiting for spa', this.platform.status());
+        callback(null, null as any);
         return;
       }
       const val = this.platform.spa!.convertTempToC(temperature);

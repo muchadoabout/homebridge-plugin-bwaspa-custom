@@ -108,8 +108,8 @@ export class ThermostatAccessory {
     } else {
       const temperature = this.platform.spa!.getCurrentTemp();
       if (temperature == undefined) {
-        this.platform.log.debug('Get Current Temperature <- unknown (waiting for spa)', this.platform.status());
-        callback(new Error('Temperature not yet available'));
+        this.platform.log.debug('Get Current Temperature <- waiting for spa', this.platform.status());
+        callback(null, null as any);
         return;
       }
       const val = this.platform.spa!.convertTempToC(temperature);
@@ -214,8 +214,8 @@ export class ThermostatAccessory {
     } else {
       const targetTemp = this.platform.spa!.getTargetTemp();
       if (targetTemp == undefined) {
-        this.platform.log.debug('Get Target Temperature <- unknown (waiting for spa)', this.platform.status());
-        callback(new Error('Target temperature not yet available'));
+        this.platform.log.debug('Get Target Temperature <- waiting for spa', this.platform.status());
+        callback(null, null as any);
         return;
       }
       const temperature = this.platform.spa!.convertTempToC(targetTemp);

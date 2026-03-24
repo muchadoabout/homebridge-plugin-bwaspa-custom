@@ -26,6 +26,12 @@ This fork adds a configurable log level in the Homebridge plugin settings UI (Mi
 
 ## Changelog
 
+### v1.0.6 -- Fix thermostat "No Response" and temperature display
+
+- **Hold last known temperature when spa reports 0xFF.** The spa periodically sends 255 (0xFF) as the current temperature to indicate "no fresh reading" (common during priming and normal operation). Previously this set the temperature to `undefined`, which cascaded into other issues. Now the last valid temperature is preserved through these gaps.
+- **Fix thermostat "No Response" in HomeKit.** Returning an `Error` from GET handlers (introduced in v1.0.4) caused HomeKit to mark the thermostat as permanently unresponsive. GET handlers now return `null` when a value isn't available yet, which lets HomeKit use its cached value until a real reading arrives (typically within 1-2 seconds of connection).
+- **Fix state change log always triggering on "Normal" log level.** The change detection was comparing the full state string which includes the spa's clock time, so it always detected a "change" every 15 minutes. Change detection now ignores the clock and only logs when meaningful state changes (temperature, pumps, heating, etc.).
+
 ### v1.0.5 -- Logging, parser fixes, and polish
 
 - **Configurable log level.** New "Log Level" setting in the Homebridge plugin UI:
@@ -34,13 +40,12 @@ This fork adds a configurable log level in the Homebridge plugin settings UI (Mi
   - *Verbose* -- logs full spa state every 15 minutes (original behavior, useful for troubleshooting)
 - **Parser re-sync on corrupt data.** When the message parser receives corrupted data, it now scans forward to the next valid message boundary instead of cascading into dozens of error log lines.
 - **Wi-Fi channel hint.** On the first checksum or corruption error, a one-time tip is logged suggesting the user try a different 2.4 GHz Wi-Fi channel (a common fix per [issue #26](https://github.com/vincedarley/homebridge-plugin-bwaspa/issues/26)).
-- **Target temperature null fix.** `getTargetTemperature` now returns an error to HomeKit when the value is unknown, instead of sending `null`.
 - **Discovery interval leak fix.** Repeated re-discovery calls no longer accumulate UDP broadcast intervals.
 - **Temperature update guard fix.** Changed a falsy check to a proper null check so a 0-degree reading would not be incorrectly skipped.
 
 ### v1.0.4 -- Null temperature fix
 
-- **Stop sending null temperatures to HomeKit.** GET handlers now return an error instead of `null` when the temperature is unknown, and `updateValue` calls are skipped for unknown temps. Eliminates the repeated "illegal value: null" warnings ([issue #25](https://github.com/vincedarley/homebridge-plugin-bwaspa/issues/25)).
+- **Reduce "illegal value: null" warnings.** When the spa hasn't reported its temperature, `updateValue` calls are now skipped for unknown temps, reducing repeated warnings in the Homebridge log.
 
 ### v1.0.3 -- Socket connect timeout and parallel re-discovery
 

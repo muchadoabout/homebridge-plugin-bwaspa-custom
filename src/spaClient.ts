@@ -293,9 +293,10 @@ export class SpaClient {
                     this.log.info('Latest spa state', this.stateToString());
                 } else if (this.logLevel === 'normal') {
                     const currentState = this.stateToString();
-                    if (currentState !== this.lastLoggedStateString) {
+                    const compareKey = this.stateCompareKey();
+                    if (compareKey !== this.lastLoggedStateString) {
                         this.log.info('Latest spa state', currentState);
-                        this.lastLoggedStateString = currentState;
+                        this.lastLoggedStateString = compareKey;
                     }
                 }
                 this.checkAndSetTimeOfDay();
@@ -1054,6 +1055,16 @@ export class SpaClient {
         return this.convertSpaTemperatureToExternal(temperature).toFixed(1).toString() + "C"; 
     }
 
+    stateCompareKey() {
+        return [
+            this.currentTemp, this.tempRangeIsHigh, this.targetTempModeHigh, this.targetTempModeLow,
+            this.priming, this.heatingMode, this.isHeatingNow, ...this.pumpsCurrentSpeed,
+            this.circulationPumpIsOn, this.filtering, ...this.lightIsOn,
+            this.blowerCurrentSpeed, this.misterIsOn, ...this.auxIsOn,
+            this.lockTheEntirePanel, this.lockTheSettings, this.hold,
+        ].join(',');
+    }
+
     stateToString() {
         let pumpDesc = '[';
         for (let i = 0; i<6;i++) {
@@ -1178,13 +1189,13 @@ export class SpaClient {
 
         // Seems like priming goes through different states, so not sure this simplicity is correct
         this.priming = ((bytes[1] & 1) === 1);
-        // If current_temp = 255, then the Spa is still not fully initialised
-        // (but is not necessarily in "priming" state). Need to wait, really - after some seconds the
-        // correct temperature is read.
-        // Probably better to say the temperature is unknown, if homekit supports that.  The Balboa
-        // app, for what it's worth, also is confused when current temp = 255.  We currently report
-        // 'undefined' here, which our temperature accessory turns into a 'null' to send to Homekit.
-        this.currentTemp = (bytes[2] == 255 ? undefined : bytes[2]);
+        // If current_temp = 255, the spa doesn't have a fresh reading right now
+        // (common during priming or periodically during normal operation).
+        // Keep the previous value so HomeKit continues to show the last known
+        // temperature instead of marking the thermostat as "No Response".
+        if (bytes[2] != 255) {
+            this.currentTemp = bytes[2];
+        }
         this.hour = bytes[3];
         this.minute = bytes[4];
         // Three possible states for heating mode. We can only set it to two states though.
