@@ -2,11 +2,12 @@ import * as udp from 'dgram';
 import type { Logger } from 'homebridge';
 
 /**
- * Try to find a Spa on the network automatically, using UDP broadcast
+ * Try to find a Spa on the network automatically, using UDP broadcast.
+ * Returns a cancel function that stops the discovery interval.
  * @param log 
  * @param foundSpaCallback call with the ip address of any Spa found on the network
  */
-export function discoverSpas(log: Logger, foundSpaCallback: (ip: string) => void) {
+export function discoverSpas(log: Logger, foundSpaCallback: (ip: string) => void): () => void {
     const discoveryFunction = () => {
         // creating a client socket
         const client = udp.createSocket({ type: 'udp4', reuseAddr: true });
@@ -58,5 +59,5 @@ export function discoverSpas(log: Logger, foundSpaCallback: (ip: string) => void
     log.info("Searching for spa on the local network - will re-broadcast every 20 seconds until success.");
     discoveryFunction();
 
+    return () => { clearInterval(broadcastIntervalId); };
 }
-

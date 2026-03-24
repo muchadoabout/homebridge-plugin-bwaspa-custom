@@ -30,6 +30,7 @@ export class SpaHomebridgePlatform implements DynamicPlatformPlugin {
   devices : any[];
   deviceObjects : any[];
   name : string;
+  cancelDiscovery?: () => void;
 
   connectionProblem = new Error('Connecting...');
 
@@ -65,7 +66,7 @@ export class SpaHomebridgePlatform implements DynamicPlatformPlugin {
       this.haveAddressOfSpa(config.devMode, config.host);
     } else {
       // We'll go out and find it automatically
-      discoverSpas(log, this.haveAddressOfSpa.bind(this, config.devMode));
+      this.cancelDiscovery = discoverSpas(log, this.haveAddressOfSpa.bind(this, config.devMode));
     }
     
     this.api.on(APIEvent.SHUTDOWN, () => {
@@ -87,12 +88,18 @@ export class SpaHomebridgePlatform implements DynamicPlatformPlugin {
     // so we can re-discover on the network if the IP changes.
     const rediscoverCallback = (this.config.host && this.config.host.length > 0)
       ? undefined
-      : () => discoverSpas(this.log, this.haveAddressOfSpa.bind(this, devMode));
+      : () => {
+          if (this.cancelDiscovery) {
+            this.cancelDiscovery();
+          }
+          this.cancelDiscovery = discoverSpas(this.log, this.haveAddressOfSpa.bind(this, devMode));
+        };
 
     // Create and load up our primary client which connects with the spa
+    const logLevel = this.config.logLevel || 'normal';
     this.spa = new SpaClient(this.log, ipAddress, this.spaConfigurationKnown.bind(this),
       this.updateStateOfAccessories.bind(this), this.executeAllRecordedActions.bind(this), 
-      rediscoverCallback, devMode);
+      rediscoverCallback, devMode, logLevel);
   }
 
   /**

@@ -7,7 +7,8 @@
     {
       "items": [
         "autoCreateAccessories",
-        "name"
+        "name",
+        "logLevel"
       ]
     },
     {
@@ -40,6 +41,18 @@
         "type": "boolean",
         "default": true,
         "required": true
+      },
+      "logLevel": {
+        "title": "Log Level",
+        "description": "Controls how much the plugin logs. Normal (default) logs connection events and state changes. Minimal logs only errors and warnings. Verbose logs full spa state every 15 minutes, useful for troubleshooting.",
+        "type": "string",
+        "default": "normal",
+        "required": false,
+        "oneOf": [
+          { "title": "Minimal - Errors and warnings only", "enum": ["minimal"] },
+          { "title": "Normal - Connection events and state changes", "enum": ["normal"] },
+          { "title": "Verbose - Full state every 15 min (for troubleshooting)", "enum": ["verbose"] }
+        ]
       },
       "host": {
         "title": "Spa IP Address",

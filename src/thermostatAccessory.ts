@@ -213,10 +213,14 @@ export class ThermostatAccessory {
       callback(this.platform.connectionProblem);
     } else {
       const targetTemp = this.platform.spa!.getTargetTemp();
-      const temperature = targetTemp != undefined ? this.platform.spa!.convertTempToC(targetTemp) : undefined;
+      if (targetTemp == undefined) {
+        this.platform.log.debug('Get Target Temperature <- unknown (waiting for spa)', this.platform.status());
+        callback(new Error('Target temperature not yet available'));
+        return;
+      }
+      const temperature = this.platform.spa!.convertTempToC(targetTemp);
       this.platform.log.debug('Get Target Temperature <-', temperature, this.platform.status());
-  
-      callback(null, temperature ?? null);
+      callback(null, temperature);
     }
   }
 

@@ -79,10 +79,15 @@ export class TemperatureAccessory {
     }
 
     const temperature = this.platform.spa!.getCurrentTemp();
-    const val = (temperature == undefined ? null : this.platform.spa!.convertTempToC(temperature!)!);
-    this.platform.log.debug('Temperature updating to',val);
-    if (val)
+    if (temperature == undefined) {
+      this.platform.log.debug('Temperature updating skipped (unknown)');
+      return;
+    }
+    const val = this.platform.spa!.convertTempToC(temperature);
+    this.platform.log.debug('Temperature updating to', val);
+    if (val != null) {
       this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature).updateValue(val);
+    }
   }
 
 }

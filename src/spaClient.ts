@@ -115,6 +115,9 @@ export class SpaClient {
     tempHistoryIntervalId: any;
     // Can be set in the overall config to provide more detailed logging
     devMode: boolean;
+    logLevel: string;
+    lastLoggedStateString: string = '';
+    hasLoggedWifiHint: boolean = false;
 
     reconnectAttempts: number = 0;
 
@@ -128,10 +131,12 @@ export class SpaClient {
       public readonly changesCallback: () => void, 
       public readonly reconnectedCallback: () => void, 
       public readonly rediscoverCallback?: () => void,
-      devMode?: boolean) {
+      devMode?: boolean,
+      logLevel?: string) {
         this.accurateConfigReadFromSpa = false;
         this.isCurrentlyConnectedToSpa = false;
         this.devMode = (devMode ? devMode : false);
+        this.logLevel = logLevel || 'normal';
         // Be generous to start. Once we've read the config we will reduce the number of lights
         // if needed.
         this.lightIsOn = [false,false];
@@ -284,7 +289,15 @@ export class SpaClient {
         }
         this.stateLoggingIntervalId = setInterval(() => {
             if (this.isCurrentlyConnectedToSpa) {
-                this.log.info('Latest spa state', this.stateToString());
+                if (this.logLevel === 'verbose') {
+                    this.log.info('Latest spa state', this.stateToString());
+                } else if (this.logLevel === 'normal') {
+                    const currentState = this.stateToString();
+                    if (currentState !== this.lastLoggedStateString) {
+                        this.log.info('Latest spa state', currentState);
+                        this.lastLoggedStateString = currentState;
+                    }
+                }
                 this.checkAndSetTimeOfDay();
             }
         }, 15 * 60 * 1000);
@@ -294,7 +307,7 @@ export class SpaClient {
             this.log.error("Shouldn't ever already have a health log interval running here.");
         }
         this.healthLogIntervalId = setInterval(() => {
-            if (this.isCurrentlyConnectedToSpa) {
+            if (this.isCurrentlyConnectedToSpa && this.logLevel !== 'minimal') {
                 const uptimeMs = Math.abs(new Date().getTime() - this.liveSinceDate.getTime());
                 const uptimeHours = (uptimeMs / (1000 * 3600)).toFixed(1);
                 this.log.info('Spa connection health: uptime', uptimeHours, 'hours,',
@@ -305,6 +318,17 @@ export class SpaClient {
         // Call to ensure we catch up on anything that happened while we
         // were disconnected.
         this.reconnectedCallback();
+    }
+
+    logWifiHintOnce() {
+        if (!this.hasLoggedWifiHint) {
+            this.hasLoggedWifiHint = true;
+            this.log.warn(
+                'Tip: Checksum/corruption errors often indicate Wi-Fi interference on the 2.4 GHz band. ' +
+                'Try manually setting the Wi-Fi channel on the access point nearest your spa to a ' +
+                'less congested channel (1, 6, or 11 are the non-overlapping 2.4 GHz channels).'
+            );
+        }
     }
 
     lastIncompleteChunk: (Uint8Array|undefined) = undefined;
@@ -362,6 +386,7 @@ export class SpaClient {
                     // Seems like a good message. Check the checksum is ok
                     if (checksum != this.compute_checksum(new Uint8Array([msgLength]), thisMsg.slice(2,msgLength))) {
                         this.log.error("Bad checksum", checksum, "for", this.prettify(thisMsg));
+                        this.logWifiHintOnce();
                     } else {
                         const somethingChanged = this.readAndActOnMessage(msgLength, checksum, thisMsg);
                         if (somethingChanged) {
@@ -393,8 +418,17 @@ export class SpaClient {
                 }
                 messagesProcessed++;
             } else {
-                // Message didn't start/end correctly
-                this.log.error("Message with bad terminations encountered:", this.prettify(chunk));
+                // Message didn't start/end correctly -- scan forward to the
+                // next 0x7e boundary to re-sync instead of using the corrupt
+                // length byte which would cascade failures.
+                let skipped = 1;
+                while (skipped < chunk.length && chunk[skipped] !== 0x7e) {
+                    skipped++;
+                }
+                this.log.warn("Corrupt data received, skipping", skipped, "bytes to re-sync");
+                this.logWifiHintOnce();
+                chunk = chunk.slice(skipped);
+                continue;
             }
             // Process rest of the chunk, as needed (go round the while loop).
             // It might contain more messages
